@@ -2,6 +2,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CallbackContext
 import re
 from config.config import ADMIN_USER_ID
+from datetime import datetime, timedelta
 
 # Состояния для обработки ввода формы
 FORM_STATE = "form_state"
@@ -147,3 +148,45 @@ async def handle_form_input(update: Update, context: CallbackContext):
         await start(update, context)
         del context.user_data[FORM_STATE]
         del context.user_data[DELETE_STATE]
+
+async def check_birthdays(chat_id, context: CallbackContext):
+    today = datetime.now()
+    tomorrow = today + timedelta(days=1)
+    current_month = today.month
+    
+    birthday_today = []
+    birthday_tomorrow = []
+    birthday_this_month = []
+    
+    for user in user_list:
+        # Преобразуем дату рождения пользователя в объект datetime
+        dob = datetime.strptime(user['dob'], "%d.%m.%Y")
+        
+        # Если день рождения сегодня
+        if dob.month == today.month and dob.day == today.day:
+            birthday_today.append(user)
+        
+        # Если день рождения завтра
+        elif dob.month == tomorrow.month and dob.day == tomorrow.day:
+            birthday_tomorrow.append(user)
+        
+        # Если день рождения в этом месяце
+        elif dob.month == current_month:
+            birthday_this_month.append(user)
+    
+    # Отправляем сообщение для дней рождения сегодня
+    if birthday_today:
+        users = "\n".join([f"@{user['username']} - {user['dob']}" for user in birthday_today])
+        await context.bot.send_message(chat_id=chat_id, text=f"Давайте поздравим этих замечательных людей с днем рождения!\n{users}")
+
+    # Отправляем сообщение для дней рождения завтра
+    if birthday_tomorrow:
+        users = "\n".join([f"@{user['username']} - {user['dob']}" for user in birthday_tomorrow])
+        await context.bot.send_message(chat_id=chat_id, text=f"Завтра у этих людей день рождения:\n{users}")
+
+    # Отправляем сообщение для дней рождения в текущем месяце
+    if birthday_this_month:
+        users = "\n".join([f"@{user['username']} - {user['dob']}" for user in birthday_this_month])
+        await context.bot.send_message(chat_id=chat_id, text=f"В этом месяце у этих людей день рождения:\n{users}")
+
+
