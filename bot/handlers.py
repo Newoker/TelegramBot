@@ -1,12 +1,22 @@
-# Создайте файл bot/handlers.py, в котором будут обработчики команд и сообщений:
 # bot/handlers.py
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
+from config.config import ADMIN_USER_ID  # Импортируем ID админа
 
-def start(update: Update, context: CallbackContext):
+
+async def start(update: Update, context: CallbackContext):
     """Обработчик команды /start"""
-    update.message.reply_text("Привет! Я твой Telegram-бот!")
+    await update.message.reply_text("Привет! Я твой Telegram-бот!")
 
-def help(update: Update, context: CallbackContext):
+async def help(update: Update, context: CallbackContext):
     """Обработчик команды /help"""
-    update.message.reply_text("Как я могу помочь?")
+    await update.message.reply_text("Как я могу помочь?")
+
+
+async def admin(update: Update, context: CallbackContext):
+    """Обработчик команды /admin, доступной только администратору"""
+    # Проверяем, является ли пользователь администратором
+    if update.message.from_user.id == int(ADMIN_USER_ID):
+        await update.message.reply_text("Привет, администратор! Чем могу помочь?")
+    else:
+        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
