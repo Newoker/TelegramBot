@@ -39,7 +39,7 @@ async def button_handler(update: Update, context: CallbackContext):
 async def send_birthday_reminders(context: CallbackContext):
     """Запускаем проверку дней рождения"""
     # Получаем чат ID, куда отправлять сообщения (например, ID админ-канала)
-    chat_id = -4694745975  # Укажите здесь ID чата
+    chat_id = -1001790737635  # Укажите здесь ID чата
     
     # Отправляем сообщение без создания объекта update
     await context.bot.send_message(chat_id=chat_id, text="Проверка дней рождения...")
