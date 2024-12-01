@@ -3,11 +3,20 @@ from config.config import TOKEN  # Токен для бота
 from bot.handlers import start, help, admin, add, handle_form_input, delete, check_birthdays  # Импортируем обработчики
 from telegram import Update
 import datetime
+import schedule
+import time
+
 
 # Пример обработки команды для получения chat_id
 async def get_chat_id(update: Update, context: CallbackContext):
     chat_id = update.message.chat.id
     await update.message.reply_text(f"Your chat ID is: {chat_id}")
+
+def job():
+    """Функция для проверки первого дня месяца"""
+    now = datetime.datetime.now()
+    if now.day == 1:  # Проверка первого дня месяца
+        send_birthday_reminders(None)  # Передаем None вместо update, так как в этой функции оно не используется
 
 async def button_handler(update: Update, context: CallbackContext):
     """Обработчик нажатия кнопок, которые отправляют команды"""
@@ -56,9 +65,8 @@ def main() -> None:
     # Регистрируем обработчик нажатия кнопок
     application.add_handler(MessageHandler(filters.TEXT, button_handler))
 
-    # Планируем регулярную задачу для проверки дней рождения (каждый первый день месяца)
-    # Выполняется в 9:00 первого числа каждого месяца
-    application.job_queue.run_monthly(send_birthday_reminders, time=datetime.time(9, 0, 0))
+    # Запускаем планировщик задач, который будет выполняться каждый день
+    schedule.every().day.at("09:00").do(job)
 
     # Запускаем бота
     application.run_polling()
