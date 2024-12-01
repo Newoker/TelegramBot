@@ -7,11 +7,11 @@ async def button_handler(update: Update, context: CallbackContext):
     """Обработчик нажатия кнопок, которые отправляют команды"""
     text = update.message.text
 
-    if text == "Старт":
+    if text == "🚀 Старт":
         await start(update, context)  # Отправляем команду /start
-    elif text == "Помощь":
+    elif text == "❓ Помощь":
         await help(update, context)  # Отправляем команду /help
-    elif text == "Админ":
+    elif text == "👨‍💻 Админ":
         await admin(update, context)  # Отправляем команду /admin
 
 def main() -> None:
