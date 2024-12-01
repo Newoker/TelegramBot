@@ -1,13 +1,23 @@
-import os
-from dotenv import load_dotenv
+# telegram.py
+from telegram.ext import Updater, CommandHandler
+from bot.bot import create_bot
+from bot.handlers import start, help
 
-# Загружаем переменные из файла .env
-load_dotenv()
+def main():
+    """Главная функция для запуска бота"""
+    # Создаем бота
+    bot = create_bot()
 
-# Получаем токен
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    # Создаем Updater, который будет работать с ботом
+    updater = Updater(bot=bot)
 
-if not TOKEN:
-    raise ValueError("Токен не найден! Проверьте файл .env")
+    # Регистрируем обработчики
+    updater.dispatcher.add_handler(CommandHandler("start", start))
+    updater.dispatcher.add_handler(CommandHandler("help", help))
 
-print(f"Ваш токен: {TOKEN}")
+    # Запускаем бота
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
