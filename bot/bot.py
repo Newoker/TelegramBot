@@ -1,7 +1,7 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from config.config import TOKEN  # Токен для бота
-from bot.handlers import start, help, admin  # Импортируем обработчики из handlers.py
-from telegram import Update, ReplyKeyboardMarkup
+from bot.handlers import start, help, admin, add, handle_form_input  # Импортируем обработчики
+from telegram import Update
 
 async def button_handler(update: Update, context: CallbackContext):
     """Обработчик нажатия кнопок, которые отправляют команды"""
@@ -13,6 +13,10 @@ async def button_handler(update: Update, context: CallbackContext):
         await help(update, context)  # Отправляем команду /help
     elif text == "👨‍💻 Админ":
         await admin(update, context)  # Отправляем команду /admin
+    elif text == "Добавить":
+        await add(update, context)  # Отправляем команду для добавления дня рождения
+    else:
+        await handle_form_input(update, context)  # Обрабатываем форму, если она активна
 
 def main() -> None:
     """Основная функция для запуска бота."""
