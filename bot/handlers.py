@@ -5,6 +5,7 @@ from config.config import ADMIN_USER_ID
 
 # Состояния для обработки ввода формы
 FORM_STATE = "form_state"
+DELETE_STATE = "delete_state"
 
 # Список для хранения добавленных пользователей (можно заменить на базу данных)
 user_list = []  # Список в формате: [{'username': 'ник', 'dob': 'день.месяц.год'}]
@@ -29,7 +30,7 @@ async def help(update: Update, context: CallbackContext):
 async def admin(update: Update, context: CallbackContext):
     """Обработчик команды /admin, доступной только администратору"""
     if update.message.from_user.id == int(ADMIN_USER_ID):
-        keyboard = [["Добавить", "Список", "Назад"]]  # Кнопка "Назад" для возврата в главное меню
+        keyboard = [["Добавить", "Список", "Удалить", "Назад"]]  # Кнопка "Назад" для возврата в главное меню
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         await update.message.reply_text("Привет, администратор! Выберите действие:", reply_markup=reply_markup)
     else:
@@ -47,25 +48,39 @@ async def add(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("Эта команда доступна только для администратора.")
 
+async def delete(update: Update, context: CallbackContext):
+    """Обработчик кнопки "Удалить" в админке"""
+    if update.message.from_user.id == int(ADMIN_USER_ID):
+        if user_list:
+            # Переходим в режим ожидания ника для удаления
+            context.user_data[DELETE_STATE] = True
+            await update.message.reply_text("Введите @Ник для удаления:", reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Назад"]], resize_keyboard=True))
+        else:
+            # Список пуст, но остаемся в меню
+            await update.message.reply_text(
+                "Список пуст. Нет пользователей для удаления.",
+                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
+            )
+
 
 async def handle_form_input(update: Update, context: CallbackContext):
     """Обработчик ввода данных для формы"""
     
     # Проверка на нажатие кнопки "❌ Отмена"
     if update.message.text == "❌ Отмена":
-        # Отправляем сообщение об отмене добавления
+        # Отправляем сообщение об отмене добавления или удаления
         await update.message.reply_text(
-            "Отмена добавления.",
-            reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Назад"]], resize_keyboard=True)
+            "Отмена действия.",
+            reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
         )
-        del context.user_data[FORM_STATE]  # Очистка состояния
+        # Очистка всех состояний
+        del context.user_data[FORM_STATE]
+        del context.user_data[DELETE_STATE]
         return
 
-    # Обработка формы, если состояние формы активно
+    # Обработка формы добавления пользователя
     if FORM_STATE in context.user_data:
-        # Получаем текст, который прислал пользователь
         user_input = update.message.text
-        # Проверяем, что текст соответствует формату @ник и день.месяц.год
         match = re.match(r"^@(\w+)\s(\d{2})\.(\d{2})\.(\d{4})$", user_input)
 
         if match:
@@ -73,7 +88,6 @@ async def handle_form_input(update: Update, context: CallbackContext):
 
             # Проверка, если такой пользователь уже есть в списке
             if any(user['username'] == username for user in user_list):
-                # Отправляем сообщение, если человек уже в списке
                 await update.message.reply_text(
                     "Такой человек уже находится в списке.",
                     reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Список", "Назад"]], resize_keyboard=True)
@@ -82,14 +96,10 @@ async def handle_form_input(update: Update, context: CallbackContext):
 
             # Добавляем нового пользователя в список
             user_list.append({'username': username, 'dob': f"{day}.{month}.{year}"})
-            
-            # Подтверждение добавления
             await update.message.reply_text(
                 f"Спасибо! Вы добавили:\nИмя: @{username}\nДата рождения: {day}.{month}.{year}",
-                reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Список", "Назад"]], resize_keyboard=True)
+                reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Список", "Удалить", "Назад"]], resize_keyboard=True)
             )
-            
-            # После успешного ввода сбрасываем состояние формы
             del context.user_data[FORM_STATE]
 
         else:
@@ -98,29 +108,42 @@ async def handle_form_input(update: Update, context: CallbackContext):
                 reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Список", "Назад"]], resize_keyboard=True)
             )
 
-    elif update.message.text == "Назад":
-        # Возвращаем пользователя в основное меню
-        await start(update, context)  # Отправляем команду /start
-        del context.user_data[FORM_STATE]  # Очистка состояния формы, чтобы не возвращаться к ней
+    # Обработка запроса на удаление пользователя
+    elif DELETE_STATE in context.user_data:
+        username_to_delete = update.message.text.strip()
 
+        # Ищем пользователя по нику
+        user_to_delete = next((user for user in user_list if user['username'] == username_to_delete), None)
+
+        if user_to_delete:
+            user_list.remove(user_to_delete)
+            await update.message.reply_text(
+                f"Пользователь @{username_to_delete} удален из списка.",
+                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
+            )
+        else:
+            await update.message.reply_text(
+                "Пользователь с таким ником не найден.",
+                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
+            )
+        del context.user_data[DELETE_STATE]
+
+    # Обработка кнопки "Список"
     elif update.message.text == "Список":
-        # Отправляем список всех добавленных пользователей
         if user_list:
             user_list_text = "\n".join([f"@{user['username']} - {user['dob']}" for user in user_list])
             await update.message.reply_text(
                 f"Список добавленных пользователей:\n{user_list_text}",
-                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Назад"]], resize_keyboard=True)
+                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
             )
         else:
             await update.message.reply_text(
                 "Список пуст. Еще нет добавленных пользователей.",
-                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Назад"]], resize_keyboard=True)
+                reply_markup=ReplyKeyboardMarkup([["Добавить", "Список", "Удалить", "Назад"]], resize_keyboard=True)
             )
 
-    elif update.message.text == "Добавить":
-        # Включаем состояние формы для добавления пользователя
-        context.user_data[FORM_STATE] = True
-        await update.message.reply_text(
-            "Введите данные в формате:\n@ник\nДЕНЬ.МЕСЯЦ.ГОД",
-            reply_markup=ReplyKeyboardMarkup([["❌ Отмена", "Список", "Назад"]], resize_keyboard=True)
-        )
+    # Кнопка "Назад"
+    elif update.message.text == "Назад":
+        await start(update, context)
+        del context.user_data[FORM_STATE]
+        del context.user_data[DELETE_STATE]

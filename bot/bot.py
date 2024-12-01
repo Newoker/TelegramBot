@@ -1,6 +1,6 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from config.config import TOKEN  # Токен для бота
-from bot.handlers import start, help, admin, add, handle_form_input  # Импортируем обработчики
+from bot.handlers import start, help, admin, add, handle_form_input, delete  # Импортируем обработчики
 from telegram import Update
 
 async def button_handler(update: Update, context: CallbackContext):
@@ -15,6 +15,9 @@ async def button_handler(update: Update, context: CallbackContext):
         await admin(update, context)  # Отправляем команду /admin
     elif text == "Добавить":
         await add(update, context)  # Отправляем команду для добавления дня рождения
+    elif text == "Удалить":
+        # Обрабатываем запрос на удаление
+        await delete(update, context)  # Устанавливаем состояние удаления
     else:
         await handle_form_input(update, context)  # Обрабатываем форму, если она активна
 
